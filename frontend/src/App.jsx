@@ -2,7 +2,7 @@ import { useEffect } from "react";
 
 export default function App() {
   useEffect(() => {
-    const ws = new WebSocket("ws://localhost:8080/ws/audio");
+    const ws = new WebSocket(import.meta.env.VITE_WS_URL || "ws://localhost:8080/ws/audio");
     ws.binaryType = "arraybuffer";
 
     ws.onopen = async () => {
