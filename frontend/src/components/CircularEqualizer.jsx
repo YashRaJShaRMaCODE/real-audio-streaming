@@ -7,10 +7,12 @@ export default function CircularEqualizer() {
 
   useEffect(() => {
     const canvas = canvasRef.current;
-    const ctx = canvas.getContext("2d");
+    const ctx = canvas?.getContext("2d");
+    if (!canvas || !ctx) return;
+    let frameId;
 
     function draw() {
-      requestAnimationFrame(draw);
+      frameId = requestAnimationFrame(draw);
 
       if (!analyserRef.current) return;
 
@@ -44,7 +46,8 @@ export default function CircularEqualizer() {
     }
 
     draw();
-  }, []);
+    return () => cancelAnimationFrame(frameId);
+  }, [analyserRef, dataArrayRef]);
 
   return <canvas ref={canvasRef} width={400} height={400} />;
 }
