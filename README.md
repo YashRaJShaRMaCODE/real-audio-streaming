@@ -9,6 +9,8 @@ A full-stack real-time audio streaming application built using **React (Vite)** 
 - Low-latency architecture
 - Full-stack setup (Frontend + Backend)
 
+The current backend echoes binary frames for a local prototype. It does not record, transcode, or persist audio. Configure `AUDIO_ALLOWED_ORIGINS` to the exact frontend origins before deployment; the default only permits the local Vite origin.
+
 ## Tech Stack
 - Frontend: React, Vite, Web Audio API
 - Backend: Spring Boot, WebSockets
