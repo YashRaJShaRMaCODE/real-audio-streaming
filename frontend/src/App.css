@@ -10,25 +10,31 @@ button:focus-visible, a:focus-visible { outline: 3px solid #f5b94c; outline-offs
 .header-index { color: #657588; }
 .studio-panel { width: min(100%, 640px); margin: auto; padding: 70px 24px 84px; text-align: center; }
 .signal-orb { width: 124px; height: 124px; margin: 0 auto 34px; display: grid; place-items: center; border: 1px solid #344758; border-radius: 50%; box-shadow: 0 0 0 14px #14222f, 0 0 0 15px #26394a; transition: border-color .2s ease, box-shadow .2s ease; }
-.signal-orb span { width: 28px; height: 28px; border-radius: 50%; background: #8190a0; box-shadow: 0 0 24px #8190a055; }
-.signal-live { border-color: #f5b94c; box-shadow: 0 0 0 14px #242a2d, 0 0 0 15px #7e6435; }
-.signal-live span { background: #f5b94c; box-shadow: 0 0 32px #f5b94c99; }
-.signal-connecting span { background: #78c7bf; }
+.signal-wave { width: 58px; height: 40px; display: flex; align-items: center; justify-content: center; gap: 4px; --level: 0; }
+.signal-wave span { width: 3px; height: 100%; border-radius: 999px; background: #8190a0; transform: scaleY(var(--rest)); transform-origin: center; transition: transform 90ms linear, background-color .2s ease; }
+.signal-live { border-color: #f5b94c; box-shadow: 0 0 0 14px #242a2d, 0 0 0 15px #7e6435; animation: signal-breathe 2.4s ease-in-out infinite; }
+.signal-live .signal-wave span { background: #f5b94c; box-shadow: 0 0 18px #f5b94c88; transform: scaleY(calc(var(--rest) + var(--level))); }
+.signal-connecting { animation: signal-connect 1.2s ease-in-out infinite; }
+.signal-connecting .signal-wave span { background: #78c7bf; }
 .studio-kicker { margin: 0 0 16px; color: #f5b94c; font-family: ui-monospace, 'Cascadia Code', monospace; font-size: .72rem; letter-spacing: .08em; }
 h1 { margin: 0; font-size: clamp(2.2rem, 7vw, 4.1rem); line-height: 1.05; letter-spacing: -.055em; }
 .studio-copy { max-width: 430px; margin: 20px auto 0; color: #aab8c6; line-height: 1.7; }
 .connection-status { min-height: 28px; margin: 34px 0 22px; display: flex; align-items: center; justify-content: center; gap: 10px; color: #d3dce5; font-size: .9rem; }
 .status-dot { width: 8px; height: 8px; border-radius: 50%; background: #748396; }
-.status-live .status-dot { background: #f5b94c; }
+.status-live .status-dot { background: #f5b94c; animation: status-beacon 1.8s ease-out infinite; }
 .status-error .status-dot { background: #ff796b; }
 .error-message { margin: -8px 0 18px; color: #ff9e91; font-size: .88rem; }
 .studio-actions { display: flex; justify-content: center; gap: 12px; }
-.studio-actions button { min-width: 148px; min-height: 48px; border: 1px solid transparent; border-radius: 3px; cursor: pointer; font-weight: 700; transition: background .15s ease, border-color .15s ease; }
+.studio-actions button { min-width: 148px; min-height: 48px; border: 1px solid transparent; border-radius: 3px; cursor: pointer; font-weight: 700; transition: background .15s ease, border-color .15s ease, transform .12s ease; }
+.studio-actions button:active:not(:disabled) { transform: scale(.98); }
 .start-button { background: #f5b94c; color: #1b1b18; }
 .start-button:hover:not(:disabled) { background: #ffd27a; }
 .stop-button { border-color: #4a5b6c !important; background: transparent; color: #d8e1e9; }
 .stop-button:hover:not(:disabled) { border-color: #a9b6c4 !important; }
 button:disabled { cursor: not-allowed; opacity: .45; }
 .privacy-note { max-width: 390px; margin: 22px auto 0; color: #7f8d9d; font-size: .75rem; line-height: 1.6; }
+@keyframes signal-breathe { 50% { box-shadow: 0 0 0 20px #242a2d, 0 0 0 21px #7e6435; } }
+@keyframes signal-connect { 50% { border-color: #78c7bf; box-shadow: 0 0 0 14px #142b30, 0 0 0 15px #37615e; } }
+@keyframes status-beacon { 70% { box-shadow: 0 0 0 6px #f5b94c00; } 100% { box-shadow: 0 0 0 0 #f5b94c00; } }
 @media (max-width: 520px) { .studio-shell { padding: 0 20px; } .studio-header { min-height: 64px; } .studio-panel { padding: 52px 0 64px; } .signal-orb { width: 104px; height: 104px; margin-bottom: 28px; } .studio-actions { flex-direction: column; } .studio-actions button { width: 100%; } .studio-footer { gap: 16px; font-size: .62rem; } }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; transition-duration: .01ms !important; } }

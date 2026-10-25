@@ -5,6 +5,7 @@ export default function App() {
   const [status, setStatus] = useState("ready");
   const [error, setError] = useState("");
   const [frames, setFrames] = useState(0);
+  const waveformRef = useRef(null);
   const sessionRef = useRef(0);
   const socketRef = useRef(null);
   const streamRef = useRef(null);
@@ -22,6 +23,7 @@ export default function App() {
     muteRef.current?.disconnect();
     contextRef.current?.close().catch(() => {});
     streamRef.current?.getTracks().forEach(track => track.stop());
+    waveformRef.current?.style.setProperty("--level", "0");
     processorRef.current = null;
     sourceRef.current = null;
     muteRef.current = null;
@@ -70,8 +72,16 @@ export default function App() {
           const mute = context.createGain();
           mute.gain.value = 0;
           processor.onaudioprocess = event => {
+            const samples = event.inputBuffer.getChannelData(0);
+            let energy = 0;
+            let count = 0;
+            for (let i = 0; i < samples.length; i += 8) {
+              energy += samples[i] * samples[i];
+              count += 1;
+            }
+            waveformRef.current?.style.setProperty("--level", String(Math.min(0.5, Math.sqrt(energy / count) * 3)));
             if (socket.readyState === WebSocket.OPEN && socket.bufferedAmount < 262144) {
-              socket.send(event.inputBuffer.getChannelData(0));
+              socket.send(samples);
             }
           };
           source.connect(processor);
@@ -121,7 +131,13 @@ export default function App() {
         <span className="header-index">LOCAL SESSION</span>
       </header>
       <section className="studio-panel" aria-labelledby="studio-title">
-        <div className={`signal-orb signal-${status}`} aria-hidden="true"><span /></div>
+        <div className={`signal-orb signal-${status}`} aria-hidden="true">
+          <div className="signal-wave" ref={waveformRef}>
+            {[0.28, 0.48, 0.72, 0.9, 0.68, 0.42, 0.24].map((rest, index) => (
+              <span key={index} style={{ "--rest": rest }} />
+            ))}
+          </div>
+        </div>
         <p className="studio-kicker">Microphone · WebSocket</p>
         <h1 id="studio-title">Check the audio path.</h1>
         <p className="studio-copy">Send microphone frames to the configured echo server. Audio is not played back or stored.</p>
