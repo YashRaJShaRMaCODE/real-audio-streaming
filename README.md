@@ -2,6 +2,8 @@
 
 A full-stack real-time audio streaming application built using **React (Vite)** and **Spring Boot WebSockets**.
 
+**Live frontend:** [real-audio-streaming.vercel.app](https://real-audio-streaming.vercel.app/) · **WebSocket endpoint:** `wss://real-audio-streaming.onrender.com/ws/audio`
+
 ## Features
 - Real-time microphone audio capture
 - WebSocket-based audio streaming
