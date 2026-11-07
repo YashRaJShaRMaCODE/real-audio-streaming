@@ -48,6 +48,8 @@ export default function App() {
     setFrames(0);
     setStatus("connecting");
     try {
+      const socketUrl = import.meta.env.VITE_WS_URL || (import.meta.env.DEV ? "ws://localhost:8080/ws/audio" : "");
+      if (!socketUrl) throw new Error("Audio server is not configured for this deployment.");
       if (!navigator.mediaDevices?.getUserMedia) {
         throw new Error("Microphone access needs a secure browser context.");
       }
@@ -57,7 +59,7 @@ export default function App() {
         return;
       }
       streamRef.current = stream;
-      const socket = new WebSocket(import.meta.env.VITE_WS_URL || "ws://localhost:8080/ws/audio");
+      const socket = new WebSocket(socketUrl);
       socket.binaryType = "arraybuffer";
       socketRef.current = socket;
       socket.onopen = async () => {

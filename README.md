@@ -11,7 +11,7 @@ A full-stack real-time audio streaming application built using **React (Vite)** 
 - Low-latency architecture
 - Full-stack setup (Frontend + Backend)
 
-The current backend echoes binary frames for a local prototype. It does not record, transcode, or persist audio. It limits frames to 32 KiB and 30 frames per second per connection. Configure `AUDIO_ALLOWED_ORIGINS` to the exact frontend origins before deployment; the default only permits the local Vite origin. The origin allowlist is a browser policy, not client authentication.
+The current backend echoes binary frames for a prototype. It does not record, transcode, or persist audio. It limits frames to 32 KiB and 30 frames per second per connection. The Render blueprint sets `AUDIO_ALLOWED_ORIGINS` to the production frontend and uses `/health` for service checks; local development defaults to `http://localhost:5173`. The origin allowlist is a browser policy, not client authentication.
 
 ## Tech Stack
 - Frontend: React, Vite, Web Audio API

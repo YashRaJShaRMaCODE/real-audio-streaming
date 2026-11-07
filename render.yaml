@@ -4,3 +4,7 @@ services:
     runtime: docker
     plan: free
     rootDir: backend
+    healthCheckPath: /health
+    envVars:
+      - key: AUDIO_ALLOWED_ORIGINS
+        value: https://real-audio-streaming.vercel.app
