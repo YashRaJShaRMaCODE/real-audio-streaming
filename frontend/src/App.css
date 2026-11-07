@@ -38,3 +38,16 @@ button:disabled { cursor: not-allowed; opacity: .45; }
 @keyframes status-beacon { 70% { box-shadow: 0 0 0 6px #f5b94c00; } 100% { box-shadow: 0 0 0 0 #f5b94c00; } }
 @media (max-width: 520px) { .studio-shell { padding: 0 20px; } .studio-header { min-height: 64px; } .studio-panel { padding: 52px 0 64px; } .signal-orb { width: 104px; height: 104px; margin-bottom: 28px; } .studio-actions { flex-direction: column; } .studio-actions button { width: 100%; } .studio-footer { gap: 16px; font-size: .62rem; } }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; transition-duration: .01ms !important; } }
+
+.microphone-control { width: min(100%, 360px); margin: 26px auto 0; text-align: left; }
+.microphone-control label { display: block; margin-bottom: 8px; color: #aab8c6; font-size: .78rem; }
+.microphone-control select { width: 100%; min-height: 46px; padding: 0 12px; border: 1px solid #4a5b6c; border-radius: 4px; background: #101c28; color: #e8eef5; }
+.microphone-help { margin: 8px 0 0; color: #7f8d9d; font-size: .72rem; }
+.microphone-control select:disabled { opacity: .65; }
+.signal-wave span:nth-child(1) { --rest: .28; }
+.signal-wave span:nth-child(2) { --rest: .48; }
+.signal-wave span:nth-child(3) { --rest: .72; }
+.signal-wave span:nth-child(4) { --rest: .9; }
+.signal-wave span:nth-child(5) { --rest: .68; }
+.signal-wave span:nth-child(6) { --rest: .42; }
+.signal-wave span:nth-child(7) { --rest: .24; }

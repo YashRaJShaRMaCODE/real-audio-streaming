@@ -5,6 +5,8 @@ export default function App() {
   const [status, setStatus] = useState("ready");
   const [error, setError] = useState("");
   const [frames, setFrames] = useState(0);
+  const [microphones, setMicrophones] = useState([]);
+  const [microphoneId, setMicrophoneId] = useState("");
   const waveformRef = useRef(null);
   const sessionRef = useRef(0);
   const socketRef = useRef(null);
@@ -13,6 +15,16 @@ export default function App() {
   const sourceRef = useRef(null);
   const processorRef = useRef(null);
   const muteRef = useRef(null);
+
+  const refreshMicrophones = useCallback(async () => {
+    if (!navigator.mediaDevices?.enumerateDevices) return;
+    const inputs = (await navigator.mediaDevices.enumerateDevices())
+      .filter(device => device.kind === "audioinput");
+    setMicrophones(inputs);
+    if (microphoneId && !inputs.some(device => device.deviceId === microphoneId)) {
+      setMicrophoneId("");
+    }
+  }, [microphoneId]);
 
   const release = useCallback(() => {
     const socket = socketRef.current;
@@ -42,18 +54,33 @@ export default function App() {
     release();
   }, [release]);
 
+  useEffect(() => {
+    const media = navigator.mediaDevices;
+    refreshMicrophones().catch(() => {});
+    media?.addEventListener("devicechange", refreshMicrophones);
+    return () => media?.removeEventListener("devicechange", refreshMicrophones);
+  }, [refreshMicrophones]);
+
   const start = useCallback(async () => {
     const session = ++sessionRef.current;
     setError("");
     setFrames(0);
     setStatus("connecting");
     try {
-      const socketUrl = import.meta.env.VITE_WS_URL || (import.meta.env.DEV ? "ws://localhost:8080/ws/audio" : "");
-      if (!socketUrl) throw new Error("Audio server is not configured for this deployment.");
+      const defaultSocketUrl = import.meta.env.DEV
+        ? "ws://localhost:8080/ws/audio"
+        : "wss://real-audio-streaming.onrender.com/ws/audio";
+      const socketUrl = import.meta.env.VITE_WS_URL || defaultSocketUrl;
       if (!navigator.mediaDevices?.getUserMedia) {
         throw new Error("Microphone access needs a secure browser context.");
       }
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const context = new AudioContext();
+      contextRef.current = context;
+      await context.resume();
+      if (session !== sessionRef.current) return;
+      const audio = microphoneId ? { deviceId: { exact: microphoneId } } : true;
+      const stream = await navigator.mediaDevices.getUserMedia({ audio });
+      await refreshMicrophones().catch(() => {});
       if (session !== sessionRef.current) {
         stream.getTracks().forEach(track => track.stop());
         return;
@@ -65,9 +92,7 @@ export default function App() {
       socket.onopen = async () => {
         if (session !== sessionRef.current || socketRef.current !== socket) return;
         try {
-          const context = new AudioContext();
-          contextRef.current = context;
-          await context.resume();
+          if (context.state !== "running") await context.resume();
           if (session !== sessionRef.current || socketRef.current !== socket) return;
           const source = context.createMediaStreamSource(stream);
           const processor = context.createScriptProcessor(4096, 1, 1);
@@ -123,26 +148,41 @@ export default function App() {
       setError(reason.message || "Microphone could not be started.");
       setStatus("error");
     }
-  }, [release]);
+  }, [microphoneId, refreshMicrophones, release]);
 
   return (
     <main className="studio-shell">
       <header className="studio-header">
         <a className="studio-mark" href="/" aria-label="Signal Room home">SR</a>
         <span>Audio loop test</span>
-        <span className="header-index">LOCAL SESSION</span>
+        <span className="header-index">NO AUDIO STORAGE</span>
       </header>
       <section className="studio-panel" aria-labelledby="studio-title">
         <div className={`signal-orb signal-${status}`} aria-hidden="true">
           <div className="signal-wave" ref={waveformRef}>
-            {[0.28, 0.48, 0.72, 0.9, 0.68, 0.42, 0.24].map((rest, index) => (
-              <span key={index} style={{ "--rest": rest }} />
-            ))}
+            <span /><span /><span /><span /><span /><span /><span />
           </div>
         </div>
         <p className="studio-kicker">Microphone · WebSocket</p>
         <h1 id="studio-title">Check the audio path.</h1>
         <p className="studio-copy">Send microphone frames to the configured echo server. Audio is not played back or stored.</p>
+        <div className="microphone-control">
+          <label htmlFor="microphone">Microphone</label>
+          <select
+            id="microphone"
+            value={microphoneId}
+            onChange={event => setMicrophoneId(event.target.value)}
+            disabled={status === "connecting" || status === "live"}
+          >
+            <option value="">Default microphone</option>
+            {microphones.map((device, index) => (
+              <option key={device.deviceId} value={device.deviceId}>
+                {device.label || `Microphone ${index + 1}`}
+              </option>
+            ))}
+          </select>
+          <p className="microphone-help">Device names appear after you grant microphone access.</p>
+        </div>
         <div className={`connection-status status-${status}`} role="status" aria-live="polite">
           <span className="status-dot" />
           {status === "live" ? `Live · ${frames} frames echoed` : status === "connecting" ? "Connecting to microphone and server…" : status === "error" ? "Connection needs attention" : "Ready when you are"}
