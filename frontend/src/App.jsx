@@ -136,10 +136,13 @@ export default function App() {
         setError("Audio server connection failed. Check the server URL and try again.");
         setStatus("error");
       };
-      socket.onclose = () => {
+      socket.onclose = event => {
         if (session === sessionRef.current && socketRef.current === socket) {
           release();
-          setStatus("ready");
+          setError(event.code === 1008
+            ? "Audio server closed the session because its frame-rate limit was exceeded."
+            : "Audio server closed the session unexpectedly. Check the connection and try again.");
+          setStatus("error");
         }
       };
     } catch (reason) {
