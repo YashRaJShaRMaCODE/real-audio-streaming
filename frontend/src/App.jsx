@@ -4,7 +4,9 @@ import "./App.css";
 export default function App() {
   const [status, setStatus] = useState("ready");
   const [error, setError] = useState("");
-  const [frames, setFrames] = useState(0);
+  const [framesSent, setFramesSent] = useState(0);
+  const [framesEchoed, setFramesEchoed] = useState(0);
+  const [framesDropped, setFramesDropped] = useState(0);
   const [microphones, setMicrophones] = useState([]);
   const [microphoneId, setMicrophoneId] = useState("");
   const waveformRef = useRef(null);
@@ -64,7 +66,9 @@ export default function App() {
   const start = useCallback(async () => {
     const session = ++sessionRef.current;
     setError("");
-    setFrames(0);
+    setFramesSent(0);
+    setFramesEchoed(0);
+    setFramesDropped(0);
     setStatus("connecting");
     try {
       const defaultSocketUrl = import.meta.env.DEV
@@ -107,8 +111,17 @@ export default function App() {
               count += 1;
             }
             waveformRef.current?.style.setProperty("--level", String(Math.min(0.5, Math.sqrt(energy / count) * 3)));
-            if (socket.readyState === WebSocket.OPEN && socket.bufferedAmount < 262144) {
-              socket.send(samples);
+            if (socket.readyState === WebSocket.OPEN) {
+              if (socket.bufferedAmount >= 262144) {
+                setFramesDropped(total => total + 1);
+              } else {
+                try {
+                  socket.send(samples);
+                  setFramesSent(total => total + 1);
+                } catch {
+                  setFramesDropped(total => total + 1);
+                }
+              }
             }
           };
           source.connect(processor);
@@ -127,7 +140,7 @@ export default function App() {
       };
       socket.onmessage = () => {
         if (session === sessionRef.current && socketRef.current === socket) {
-          setFrames(count => count + 1);
+          setFramesEchoed(count => count + 1);
         }
       };
       socket.onerror = () => {
@@ -188,8 +201,13 @@ export default function App() {
         </div>
         <div className={`connection-status status-${status}`} role="status" aria-live="polite">
           <span className="status-dot" />
-          {status === "live" ? `Live · ${frames} frames echoed` : status === "connecting" ? "Connecting to microphone and server…" : status === "error" ? "Connection needs attention" : "Ready when you are"}
+          {status === "live" ? `Live · ${framesEchoed} frames echoed` : status === "connecting" ? "Connecting to microphone and server…" : status === "error" ? "Connection needs attention" : "Ready when you are"}
         </div>
+        <dl className="session-stats" aria-label="Audio session frame counts">
+          <div><dt>Sent</dt><dd>{framesSent}</dd></div>
+          <div><dt>Echoed</dt><dd>{framesEchoed}</dd></div>
+          <div><dt>Queue drops</dt><dd>{framesDropped}</dd></div>
+        </dl>
         {error && <p className="error-message" role="alert">{error}</p>}
         <div className="studio-actions">
           <button className="start-button" onClick={start} disabled={status === "connecting" || status === "live"}>

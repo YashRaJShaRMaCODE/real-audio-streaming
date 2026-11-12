@@ -20,6 +20,10 @@ button:focus-visible, a:focus-visible { outline: 3px solid #f5b94c; outline-offs
 h1 { margin: 0; font-size: clamp(2.2rem, 7vw, 4.1rem); line-height: 1.05; letter-spacing: -.055em; }
 .studio-copy { max-width: 430px; margin: 20px auto 0; color: #aab8c6; line-height: 1.7; }
 .connection-status { min-height: 28px; margin: 34px 0 22px; display: flex; align-items: center; justify-content: center; gap: 10px; color: #d3dce5; font-size: .9rem; }
+.session-stats { width: min(100%, 420px); margin: 0 auto 24px; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.session-stats div { padding: 10px; border-top: 1px solid #304355; background: #101c28; text-align: center; }
+.session-stats dt { color: #9cabb9; font-size: .68rem; text-transform: uppercase; letter-spacing: .08em; }
+.session-stats dd { margin: 5px 0 0; color: #f3f6fa; font: 650 1.1rem/1.2 ui-monospace, monospace; }
 .status-dot { width: 8px; height: 8px; border-radius: 50%; background: #748396; }
 .status-live .status-dot { background: #f5b94c; animation: status-beacon 1.8s ease-out infinite; }
 .status-error .status-dot { background: #ff796b; }
