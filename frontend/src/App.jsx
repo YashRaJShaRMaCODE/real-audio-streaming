@@ -7,10 +7,12 @@ export default function App() {
   const [framesSent, setFramesSent] = useState(0);
   const [framesEchoed, setFramesEchoed] = useState(0);
   const [framesDropped, setFramesDropped] = useState(0);
+  const [inputSignal, setInputSignal] = useState("waiting");
   const [microphones, setMicrophones] = useState([]);
   const [microphoneId, setMicrophoneId] = useState("");
   const waveformRef = useRef(null);
   const sessionRef = useRef(0);
+  const inputSignalRef = useRef("waiting");
   const socketRef = useRef(null);
   const streamRef = useRef(null);
   const contextRef = useRef(null);
@@ -48,6 +50,8 @@ export default function App() {
   const stop = useCallback(() => {
     sessionRef.current += 1;
     release();
+    inputSignalRef.current = "waiting";
+    setInputSignal("waiting");
     setStatus("ready");
   }, [release]);
 
@@ -69,6 +73,8 @@ export default function App() {
     setFramesSent(0);
     setFramesEchoed(0);
     setFramesDropped(0);
+    inputSignalRef.current = "waiting";
+    setInputSignal("waiting");
     setStatus("connecting");
     try {
       const defaultSocketUrl = import.meta.env.DEV
@@ -110,7 +116,20 @@ export default function App() {
               energy += samples[i] * samples[i];
               count += 1;
             }
-            waveformRef.current?.style.setProperty("--level", String(Math.min(0.5, Math.sqrt(energy / count) * 3)));
+            const rms = Math.sqrt(energy / count);
+            waveformRef.current?.style.setProperty("--level", String(Math.min(0.5, rms * 3)));
+            const previousSignal = inputSignalRef.current;
+            const signal = previousSignal === "quiet" && rms < 0.012
+              ? "quiet"
+              : previousSignal === "low" && rms >= 0.005 && rms < 0.045
+                ? "low"
+                : previousSignal === "clear" && rms >= 0.025
+                  ? "clear"
+                  : rms < 0.008 ? "quiet" : rms < 0.035 ? "low" : "clear";
+            if (signal !== inputSignalRef.current) {
+              inputSignalRef.current = signal;
+              setInputSignal(signal);
+            }
             if (socket.readyState === WebSocket.OPEN) {
               if (socket.bufferedAmount >= 262144) {
                 setFramesDropped(total => total + 1);
@@ -203,6 +222,10 @@ export default function App() {
           <span className="status-dot" />
           {status === "live" ? `Live · ${framesEchoed} frames echoed` : status === "connecting" ? "Connecting to microphone and server…" : status === "error" ? "Connection needs attention" : "Ready when you are"}
         </div>
+        <p className={`input-signal input-signal-${inputSignal}`} role="status" aria-live="polite">
+          <span aria-hidden="true" />
+          {inputSignal === "waiting" ? "Waiting for microphone signal" : inputSignal === "quiet" ? "No microphone signal detected" : inputSignal === "low" ? "Low microphone signal" : "Microphone signal detected"}
+        </p>
         <dl className="session-stats" aria-label="Audio session frame counts">
           <div><dt>Sent</dt><dd>{framesSent}</dd></div>
           <div><dt>Echoed</dt><dd>{framesEchoed}</dd></div>
