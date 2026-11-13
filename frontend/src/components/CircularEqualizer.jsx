@@ -1,14 +1,14 @@
 import { useEffect, useRef } from "react";
 import { useAudioAnalyzer } from "../hooks/useAudioAnalyzer";
 
-export default function CircularEqualizer() {
+export default function CircularEqualizer({ stream }) {
   const canvasRef = useRef(null);
-  const { analyserRef, dataArrayRef } = useAudioAnalyzer();
+  const { analyserRef, dataArrayRef } = useAudioAnalyzer(stream);
 
   useEffect(() => {
     const canvas = canvasRef.current;
     const ctx = canvas?.getContext("2d");
-    if (!canvas || !ctx) return;
+    if (!canvas || !ctx || !stream) return;
     let frameId;
 
     function draw() {
@@ -47,7 +47,7 @@ export default function CircularEqualizer() {
 
     draw();
     return () => cancelAnimationFrame(frameId);
-  }, [analyserRef, dataArrayRef]);
+  }, [analyserRef, dataArrayRef, stream]);
 
   return <canvas ref={canvasRef} width={400} height={400} />;
 }

@@ -15,6 +15,9 @@ Signal Room checks the path from a browser microphone to a WebSocket echo server
 - Streams mono audio frames over a binary WebSocket and counts the frames echoed back.
 - Shows sent, echoed and locally dropped frames so a slow connection or busy browser audio queue is easier to diagnose.
 - Shows when microphone input is quiet, low or clearly detected, so a silent input is easier to spot before relying on echo counts.
+- Gives specific permission and device recovery steps for common microphone failures.
+- Stops a session if the microphone or internet connection drops; recovery always needs a manual retry.
+- Waits up to 75 seconds for the free echo server to wake, then gives a recovery message instead of leaving the page stuck.
 - Stops the stream and releases the microphone when you select **Stop** or leave the page.
 - Honors reduced-motion preferences and shows connection state to assistive technology.
 
@@ -53,6 +56,7 @@ cd backend
 
 cd ..\frontend
 npm run lint
+npm test
 npm run build
 ```
 

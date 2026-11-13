@@ -1,5 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { audioCloseMessage, microphoneErrorMessage } from "./audio-diagnostics.js";
 import "./App.css";
+
+const CONNECTION_TIMEOUT_MS = 75_000;
 
 export default function App() {
   const [status, setStatus] = useState("ready");
@@ -10,6 +13,7 @@ export default function App() {
   const [inputSignal, setInputSignal] = useState("waiting");
   const [microphones, setMicrophones] = useState([]);
   const [microphoneId, setMicrophoneId] = useState("");
+  const [networkOnline, setNetworkOnline] = useState(true);
   const waveformRef = useRef(null);
   const sessionRef = useRef(0);
   const inputSignalRef = useRef("waiting");
@@ -19,6 +23,7 @@ export default function App() {
   const sourceRef = useRef(null);
   const processorRef = useRef(null);
   const muteRef = useRef(null);
+  const connectionTimeoutRef = useRef(null);
 
   const refreshMicrophones = useCallback(async () => {
     if (!navigator.mediaDevices?.enumerateDevices) return;
@@ -31,6 +36,8 @@ export default function App() {
   }, [microphoneId]);
 
   const release = useCallback(() => {
+    if (connectionTimeoutRef.current !== null) window.clearTimeout(connectionTimeoutRef.current);
+    connectionTimeoutRef.current = null;
     const socket = socketRef.current;
     socketRef.current = null;
     if (socket && socket.readyState < WebSocket.CLOSING) socket.close();
@@ -38,7 +45,10 @@ export default function App() {
     sourceRef.current?.disconnect();
     muteRef.current?.disconnect();
     contextRef.current?.close().catch(() => {});
-    streamRef.current?.getTracks().forEach(track => track.stop());
+    streamRef.current?.getTracks().forEach(track => {
+      track.onended = null;
+      track.stop();
+    });
     waveformRef.current?.style.setProperty("--level", "0");
     processorRef.current = null;
     sourceRef.current = null;
@@ -54,6 +64,30 @@ export default function App() {
     setInputSignal("waiting");
     setStatus("ready");
   }, [release]);
+
+  useEffect(() => {
+    const updateConnection = () => {
+      const online = navigator.onLine;
+      setNetworkOnline(online);
+      if (!online && (status === "connecting" || status === "live")) {
+        sessionRef.current += 1;
+        release();
+        inputSignalRef.current = "waiting";
+        setInputSignal("waiting");
+        setError("Internet connection lost. Audio stopped; reconnect, then press Try again.");
+        setStatus("error");
+      } else if (online && error.startsWith("Internet connection lost")) {
+        setError("Connection restored. Press Try again to restart the audio check.");
+      }
+    };
+    updateConnection();
+    window.addEventListener("online", updateConnection);
+    window.addEventListener("offline", updateConnection);
+    return () => {
+      window.removeEventListener("online", updateConnection);
+      window.removeEventListener("offline", updateConnection);
+    };
+  }, [error, release, status]);
 
   useEffect(() => () => {
     sessionRef.current += 1;
@@ -89,18 +123,39 @@ export default function App() {
       await context.resume();
       if (session !== sessionRef.current) return;
       const audio = microphoneId ? { deviceId: { exact: microphoneId } } : true;
-      const stream = await navigator.mediaDevices.getUserMedia({ audio });
+      const stream = await navigator.mediaDevices.getUserMedia({ audio }).catch(reason => {
+        throw new Error(microphoneErrorMessage(reason));
+      });
       await refreshMicrophones().catch(() => {});
       if (session !== sessionRef.current) {
         stream.getTracks().forEach(track => track.stop());
         return;
       }
       streamRef.current = stream;
+      const audioTrack = stream.getAudioTracks()[0];
+      if (audioTrack) {
+        audioTrack.onended = () => {
+          if (session !== sessionRef.current || streamRef.current !== stream) return;
+          release();
+          inputSignalRef.current = "waiting";
+          setInputSignal("waiting");
+          setError("Microphone stopped unexpectedly. Check the device or choose another input, then try again.");
+          setStatus("error");
+        };
+      }
       const socket = new WebSocket(socketUrl);
       socket.binaryType = "arraybuffer";
       socketRef.current = socket;
+      connectionTimeoutRef.current = window.setTimeout(() => {
+        if (session !== sessionRef.current || socketRef.current !== socket || socket.readyState !== WebSocket.CONNECTING) return;
+        release();
+        setError("Audio server did not respond within 75 seconds. The free server can take about a minute to wake; check the connection and try again.");
+        setStatus("error");
+      }, CONNECTION_TIMEOUT_MS);
       socket.onopen = async () => {
         if (session !== sessionRef.current || socketRef.current !== socket) return;
+        if (connectionTimeoutRef.current !== null) window.clearTimeout(connectionTimeoutRef.current);
+        connectionTimeoutRef.current = null;
         try {
           if (context.state !== "running") await context.resume();
           if (session !== sessionRef.current || socketRef.current !== socket) return;
@@ -171,16 +226,14 @@ export default function App() {
       socket.onclose = event => {
         if (session === sessionRef.current && socketRef.current === socket) {
           release();
-          setError(event.code === 1008
-            ? "Audio server closed the session because its frame-rate limit was exceeded."
-            : "Audio server closed the session unexpectedly. Check the connection and try again.");
+          setError(audioCloseMessage(event.code));
           setStatus("error");
         }
       };
     } catch (reason) {
       if (session !== sessionRef.current) return;
       release();
-      setError(reason.message || "Microphone could not be started.");
+      setError(reason instanceof Error ? reason.message : "Audio could not be started. Check the microphone and connection.");
       setStatus("error");
     }
   }, [microphoneId, refreshMicrophones, release]);
@@ -224,8 +277,9 @@ export default function App() {
         </div>
         <p className={`input-signal input-signal-${inputSignal}`} role="status" aria-live="polite">
           <span aria-hidden="true" />
-          {inputSignal === "waiting" ? "Waiting for microphone signal" : inputSignal === "quiet" ? "No microphone signal detected" : inputSignal === "low" ? "Low microphone signal" : "Microphone signal detected"}
+          {inputSignal === "waiting" ? "Waiting for microphone signal" : inputSignal === "quiet" ? "No microphone signal detected · check mute and input level" : inputSignal === "low" ? "Low microphone signal · speak closer or raise input level" : "Microphone signal detected"}
         </p>
+        {!networkOnline && <p className="network-help" role="status">Offline · audio has been stopped. Reconnect and press Try again.</p>}
         <dl className="session-stats" aria-label="Audio session frame counts">
           <div><dt>Sent</dt><dd>{framesSent}</dd></div>
           <div><dt>Echoed</dt><dd>{framesEchoed}</dd></div>
@@ -233,12 +287,12 @@ export default function App() {
         </dl>
         {error && <p className="error-message" role="alert">{error}</p>}
         <div className="studio-actions">
-          <button className="start-button" onClick={start} disabled={status === "connecting" || status === "live"}>
-            {status === "connecting" ? "Connecting…" : "Start audio"}
+          <button className="start-button" onClick={start} disabled={!networkOnline || status === "connecting" || status === "live"}>
+            {!networkOnline ? "Offline" : status === "connecting" ? "Connecting…" : status === "error" ? "Try again" : "Start audio"}
           </button>
           <button className="stop-button" onClick={stop} disabled={status !== "connecting" && status !== "live"}>Stop</button>
         </div>
-        <p className="privacy-note">Your browser will ask for microphone access. Stop ends the stream and releases the microphone.</p>
+        <p className="privacy-note">Your browser will ask for microphone access. Audio is sent only after you press Start; Stop ends the stream and releases the microphone. Reconnection is always manual.</p>
       </section>
       <footer className="studio-footer"><span>Signal Room</span><span>Audio is not stored by this prototype.</span></footer>
     </main>

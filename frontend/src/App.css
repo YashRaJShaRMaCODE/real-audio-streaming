@@ -29,6 +29,7 @@ h1 { margin: 0; font-size: clamp(2.2rem, 7vw, 4.1rem); line-height: 1.05; letter
 .input-signal-quiet span { background: #e08d76; }
 .input-signal-low span { background: #e7bd63; }
 .input-signal-clear span { background: #70c7a1; }
+.network-help { margin: -12px 0 18px; color: #ffb5a9; font-size: .78rem; }
 .status-dot { width: 8px; height: 8px; border-radius: 50%; background: #748396; }
 .status-live .status-dot { background: #f5b94c; animation: status-beacon 1.8s ease-out infinite; }
 .status-error .status-dot { background: #ff796b; }
